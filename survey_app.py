@@ -30,26 +30,16 @@ def get_snowflake_session():
 
 
 def save_responses(session_id, answers):
-    """Save responses to Snowflake using raw connector (bypasses Snowpark entirely for DML)."""
+    """Save responses to Snowflake via Snowpark session."""
     try:
-        import snowflake.connector
-        raw_conn = snowflake.connector.connect(
-            account=st.secrets["connections"]["snowflake"]["account"],
-            user=st.secrets["connections"]["snowflake"]["user"],
-            password=st.secrets["connections"]["snowflake"]["password"],
-            warehouse=st.secrets["connections"]["snowflake"]["warehouse"],
-            database=st.secrets["connections"]["snowflake"]["database"],
-            schema=st.secrets["connections"]["snowflake"]["schema"],
-        )
-        cursor = raw_conn.cursor()
+        session = get_snowflake_session()
         for question_id, selected_option in answers.items():
-            cursor.execute(
-                "INSERT INTO Smoothies.PUBLIC.RESPONSES (SESSION_ID, QUESTION_ID, SELECTED_OPTION) "
-                "VALUES (%s, %s, %s)",
-                (session_id, int(question_id), selected_option),
-            )
-        cursor.close()
-        raw_conn.close()
+            safe_option = selected_option.replace("'", "''")
+            safe_session = session_id.replace("'", "''")
+            session.sql(
+                f"INSERT INTO SURVEY_DEMO.PUBLIC.RESPONSES (SESSION_ID, QUESTION_ID, SELECTED_OPTION) "
+                f"VALUES ('{safe_session}', {int(question_id)}, '{safe_option}')"
+            ).collect()
         return True
     except Exception as e:
         st.error(f"Failed to save: {e}")
@@ -62,13 +52,14 @@ def generate_qr_code_url(data):
 
 
 # --- Routing ---
-mode = st.query_params.get("mode", "survey")
+# Default landing page = QR code (for presenter). Survey mode = what audience sees after scanning.
+mode = st.query_params.get("mode", "admin")
 
 if mode == "admin":
     st.title("Survey QR Code")
     st.write("Display this QR code on screen. Audience scans to answer questions on their phone.")
 
-    app_url = st.secrets.get("app_url", "https://sfworldtour-atjkg9jtrsapp9nytiqrmpn.streamlit.app")
+    app_url = st.secrets.get("app_url", "https://your-app-name.streamlit.app")
     survey_url = f"{app_url}?mode=survey"
 
     qr_url = generate_qr_code_url(survey_url)
@@ -79,7 +70,7 @@ if mode == "admin":
     st.subheader("Live Responses")
     try:
         session = get_snowflake_session()
-        count = session.sql("SELECT COUNT(DISTINCT SESSION_ID) AS CNT FROM Smoothies.PUBLIC.RESPONSES").collect()[0]["CNT"]
+        count = session.sql("SELECT COUNT(DISTINCT SESSION_ID) AS CNT FROM SURVEY_DEMO.PUBLIC.RESPONSES").collect()[0]["CNT"]
         st.metric("Total Respondents", count)
     except Exception:
         st.info("Connect to Snowflake to see live count.")
