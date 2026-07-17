@@ -33,13 +33,18 @@ def save_responses(session_id, answers):
     """Save responses to Snowflake."""
     try:
         session = get_snowflake_session()
+        # Build a single multi-row INSERT using UNION ALL to avoid Snowpark describe issues
+        rows = []
         for question_id, selected_option in answers.items():
             safe_option = selected_option.replace("'", "''")
             safe_sid = session_id.replace("'", "''")
-            session.sql(
-                f"INSERT INTO SMOOTHIES.PUBLIC.RESPONSES (SESSION_ID, QUESTION_ID, SELECTED_OPTION) "
-                f"SELECT '{safe_sid}', {question_id}, '{safe_option}'"
-            ).collect()
+            rows.append(f"SELECT '{safe_sid}' AS S, {question_id} AS Q, '{safe_option}' AS O")
+        union_query = " UNION ALL ".join(rows)
+        sql = (
+            f"INSERT INTO SMOOTHIES.PUBLIC.RESPONSES (SESSION_ID, QUESTION_ID, SELECTED_OPTION) "
+            f"{union_query}"
+        )
+        session.sql(sql).collect()
         return True
     except Exception as e:
         st.error(f"Failed to save: {e}")
