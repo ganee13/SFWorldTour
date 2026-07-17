@@ -37,7 +37,7 @@ def save_responses(session_id, answers):
             safe_option = selected_option.replace("'", "''")
             safe_sid = session_id.replace("'", "''")
             session.sql(
-                f"INSERT INTO SURVEY_DEMO.PUBLIC.RESPONSES (SESSION_ID, QUESTION_ID, SELECTED_OPTION) "
+                f"INSERT INTO SMOOTHIES.PUBLIC.RESPONSES (SESSION_ID, QUESTION_ID, SELECTED_OPTION) "
                 f"SELECT '{safe_sid}', {question_id}, '{safe_option}'"
             ).collect()
         return True
@@ -69,7 +69,7 @@ if mode == "admin":
     st.subheader("Live Responses")
     try:
         session = get_snowflake_session()
-        count = session.sql("SELECT COUNT(DISTINCT SESSION_ID) AS CNT FROM SURVEY_DEMO.PUBLIC.RESPONSES").collect()[0]["CNT"]
+        count = session.sql("SELECT COUNT(DISTINCT SESSION_ID) AS CNT FROM SMOOTHIES.PUBLIC.RESPONSES").collect()[0]["CNT"]
         st.metric("Total Respondents", count)
     except Exception:
         st.info("Connect to Snowflake to see live count.")
