@@ -6,7 +6,7 @@ import snowflake.connector
 import uuid
 import json
 import qrcode
-from io import BytesIO
+import urllib.parse
 
 
 def get_snowflake_connection():
