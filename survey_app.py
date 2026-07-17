@@ -1,4 +1,4 @@
-# External Streamlit survey app with QR code generation and Snowflake backend
+# Lightweight survey app - pure Streamlit with no heavy dependencies at import time
 # Co-authored with CoCo
 
 import streamlit as st
@@ -6,30 +6,44 @@ import uuid
 import json
 import urllib.parse
 
+st.set_page_config(page_title="Survey", layout="centered")
 
-def load_questions(session):
-    result = session.sql(
-        "SELECT QUESTION_ID, QUESTION_TEXT, OPTIONS FROM QUESTIONS WHERE IS_ACTIVE = TRUE ORDER BY QUESTION_ID"
-    ).collect()
-    questions = []
-    for row in result:
-        options = row["OPTIONS"]
-        if isinstance(options, str):
-            options = json.loads(options)
-        questions.append({
-            "id": row["QUESTION_ID"],
-            "text": row["QUESTION_TEXT"],
-            "options": options,
-        })
-    return questions
+# --- Session state ---
+if "session_id" not in st.session_state:
+    st.session_state.session_id = str(uuid.uuid4())[:8]
+if "submitted" not in st.session_state:
+    st.session_state.submitted = False
+
+# --- Questions defined directly (no DB call needed at startup) ---
+QUESTIONS = [
+    {"id": 1, "text": "How familiar are you with Snowflake?", "options": ["Not at all", "Somewhat", "Very familiar", "Expert"]},
+    {"id": 2, "text": "What is your primary use case?", "options": ["Data Engineering", "Data Science", "Analytics", "Application Development"]},
+    {"id": 3, "text": "Which cloud provider do you primarily use?", "options": ["AWS", "Azure", "GCP", "Multi-cloud"]},
+    {"id": 4, "text": "How large is your data team?", "options": ["1-5", "6-20", "21-50", "50+"]},
+]
 
 
-def submit_responses(session, session_id, answers):
-    for question_id, selected_option in answers.items():
-        session.sql(
-            f"INSERT INTO RESPONSES (SESSION_ID, QUESTION_ID, SELECTED_OPTION) "
-            f"VALUES ('{session_id}', {question_id}, '{selected_option}')"
-        ).collect()
+def get_snowflake_session():
+    """Lazy-load Snowflake connection only when needed (not at import time)."""
+    conn = st.connection("snowflake")
+    return conn.session()
+
+
+def save_responses(session_id, answers):
+    """Save responses to Snowflake."""
+    try:
+        session = get_snowflake_session()
+        for question_id, selected_option in answers.items():
+            safe_option = selected_option.replace("'", "''")
+            safe_sid = session_id.replace("'", "''")
+            session.sql(
+                f"INSERT INTO SURVEY_DEMO.PUBLIC.RESPONSES (SESSION_ID, QUESTION_ID, SELECTED_OPTION) "
+                f"SELECT '{safe_sid}', {question_id}, '{safe_option}'"
+            ).collect()
+        return True
+    except Exception as e:
+        st.error(f"Failed to save: {e}")
+        return False
 
 
 def generate_qr_code_url(data):
@@ -37,27 +51,12 @@ def generate_qr_code_url(data):
     return f"https://api.qrserver.com/v1/create-qr-code/?size=400x400&data={encoded}"
 
 
-# --- App Configuration ---
-st.set_page_config(page_title="Survey", layout="centered")
-
-# Unique session per respondent
-if "session_id" not in st.session_state:
-    st.session_state.session_id = str(uuid.uuid4())[:8]
-
-if "submitted" not in st.session_state:
-    st.session_state.submitted = False
-
-# Switch between admin (QR display) and survey mode via query param
+# --- Routing ---
 mode = st.query_params.get("mode", "survey")
 
-# Connect to Snowflake using Streamlit's built-in connection
-conn = st.connection("snowflake")
-session = conn.session()
-
 if mode == "admin":
-    # --- ADMIN VIEW: Display QR code on projector ---
     st.title("Survey QR Code")
-    st.write("Display this on screen. Audience scans to open the survey.")
+    st.write("Display this QR code on screen. Audience scans to answer questions on their phone.")
 
     app_url = st.secrets.get("app_url", "https://your-app-name.streamlit.app")
     survey_url = f"{app_url}?mode=survey"
@@ -66,47 +65,45 @@ if mode == "admin":
     st.image(qr_url, caption="Scan to take the survey", width=400)
     st.code(survey_url, language=None)
 
-    # Live response counter
+    st.divider()
     st.subheader("Live Responses")
-    count = session.sql("SELECT COUNT(DISTINCT SESSION_ID) AS CNT FROM RESPONSES").collect()[0]["CNT"]
-    st.metric("Total Respondents", count)
+    try:
+        session = get_snowflake_session()
+        count = session.sql("SELECT COUNT(DISTINCT SESSION_ID) AS CNT FROM SURVEY_DEMO.PUBLIC.RESPONSES").collect()[0]["CNT"]
+        st.metric("Total Respondents", count)
+    except Exception:
+        st.info("Connect to Snowflake to see live count.")
 
     if st.button("Refresh"):
         st.rerun()
 
 elif st.session_state.submitted:
-    # --- THANK YOU SCREEN ---
     st.title("Thank you!")
-    st.success("Your responses have been recorded.")
+    st.success("Your responses have been recorded successfully.")
+    st.balloons()
 
 else:
-    # --- SURVEY FORM (what audience sees on their phone) ---
     st.title("Quick Survey")
     st.write("Please answer the following questions:")
 
-    questions = load_questions(session)
+    answers = {}
+    with st.form("survey_form"):
+        for q in QUESTIONS:
+            answer = st.radio(
+                q["text"],
+                options=q["options"],
+                key=f"q_{q['id']}",
+                index=None,
+            )
+            answers[q["id"]] = answer
 
-    if not questions:
-        st.warning("No questions available.")
-    else:
-        answers = {}
-        with st.form("survey_form"):
-            for q in questions:
-                answer = st.radio(
-                    q["text"],
-                    options=q["options"],
-                    key=f"q_{q['id']}",
-                    index=None,
-                )
-                answers[q["id"]] = answer
+        submitted = st.form_submit_button("Submit", type="primary", use_container_width=True)
 
-            submitted = st.form_submit_button("Submit", type="primary")
-
-            if submitted:
-                unanswered = [q["text"] for q in questions if answers.get(q["id"]) is None]
-                if unanswered:
-                    st.error(f"Please answer all questions. Missing: {len(unanswered)}")
-                else:
-                    submit_responses(session, st.session_state.session_id, answers)
+        if submitted:
+            unanswered = [q["text"] for q in QUESTIONS if answers.get(q["id"]) is None]
+            if unanswered:
+                st.error(f"Please answer all questions ({len(unanswered)} remaining)")
+            else:
+                if save_responses(st.session_state.session_id, answers):
                     st.session_state.submitted = True
                     st.rerun()
