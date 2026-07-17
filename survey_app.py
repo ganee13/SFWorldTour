@@ -5,7 +5,6 @@ import streamlit as st
 import snowflake.connector
 import uuid
 import json
-import qrcode
 import urllib.parse
 
 
