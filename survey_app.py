@@ -68,7 +68,7 @@ if mode == "admin":
     st.title("Survey QR Code")
     st.write("Display this QR code on screen. Audience scans to answer questions on their phone.")
 
-    app_url = st.secrets.get("app_url", "https://your-app-name.streamlit.app")
+    app_url = st.secrets.get("app_url", "https://sfworldtour-atjkg9jtrsapp9nytiqrmpn.streamlit.app)
     survey_url = f"{app_url}?mode=survey"
 
     qr_url = generate_qr_code_url(survey_url)
