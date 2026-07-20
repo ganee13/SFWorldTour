@@ -159,22 +159,22 @@ if st.button("Submit Survey", type="primary", use_container_width=True):
              Q4_PERFECTIONISM_VS_PRAGMATISM, Q5_RISK_MANAGEMENT,
              Q6_PROBLEM_SOLVING, Q7_CONSTRAINTS_PRIORITIES,
              Q8_AI_MINDSET, Q9_LEADERSHIP_STYLE, Q10_LEARNING_ORIENTATION)
-            VALUES (%(name)s, %(role)s, %(age)s, %(q4)s, %(q5)s, %(q6)s, %(q7)s, %(q8)s, %(q9)s, %(q10)s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         conn.query(
             insert_sql,
-            params={
-                "name": q1_name.strip(),
-                "role": q2_role,
-                "age": q3_age,
-                "q4": q4[0],
-                "q5": q5[0],
-                "q6": q6[0],
-                "q7": q7[0],
-                "q8": q8[0],
-                "q9": q9[0],
-                "q10": q10[0],
-            },
+            params=[
+                q1_name.strip(),
+                q2_role,
+                q3_age,
+                q4[0],
+                q5[0],
+                q6[0],
+                q7[0],
+                q8[0],
+                q9[0],
+                q10[0],
+            ],
         )
         st.success("Thank you! Your response has been recorded. 🎉")
         st.balloons()
