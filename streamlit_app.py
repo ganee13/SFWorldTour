@@ -3,6 +3,7 @@
 import snowflake.connector
 snowflake.connector.paramstyle = "qmark"
 import streamlit as st
+from datetime import datetime, timezone
 
 st.set_page_config(page_title="AI Readiness Survey", page_icon="🧠", layout="centered")
 
@@ -35,6 +36,15 @@ if mode == "qr":
     )
 
 else:
+    # --- BEHAVIORAL TRACKING ---
+    # Track when user first loaded the survey
+    if "survey_start_time" not in st.session_state:
+        st.session_state.survey_start_time = datetime.now(timezone.utc)
+        st.session_state.num_interactions = 0
+
+    # Count every rerun as an interaction (user changed a widget)
+    st.session_state.num_interactions += 1
+
     # --- SURVEY MODE (mobile user who scanned QR) ---
     st.title("🧠 AI Readiness Survey")
     st.markdown("Answer these quick questions to discover your AI leadership profile!")
@@ -183,13 +193,21 @@ else:
         elif q3_age == "-- Select --":
             st.error("Please select your age group.")
         else:
+            # Calculate behavioral metrics
+            submit_time = datetime.now(timezone.utc)
+            duration_seconds = (submit_time - st.session_state.survey_start_time).total_seconds()
+            num_interactions = st.session_state.num_interactions
+            name_length = len(q1_name.strip())
+            started_at = st.session_state.survey_start_time.strftime("%Y-%m-%d %H:%M:%S")
+
             insert_sql = """
                 INSERT INTO QR_SURVEY_DEMO.APP.SURVEY_RESPONSES
                 (Q1_NAME, Q2_ROLE, Q3_AGE_GROUP,
                  Q4_PERFECTIONISM_VS_PRAGMATISM, Q5_RISK_MANAGEMENT,
                  Q6_PROBLEM_SOLVING, Q7_CONSTRAINTS_PRIORITIES,
-                 Q8_AI_MINDSET, Q9_LEADERSHIP_STYLE, Q10_LEARNING_ORIENTATION)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 Q8_AI_MINDSET, Q9_LEADERSHIP_STYLE, Q10_LEARNING_ORIENTATION,
+                 STARTED_AT, DURATION_SECONDS, NUM_INTERACTIONS, NAME_LENGTH)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
             cur = conn.raw_connection.cursor()
             cur.execute(
@@ -205,6 +223,10 @@ else:
                     q8[0],
                     q9[0],
                     q10[0],
+                    started_at,
+                    duration_seconds,
+                    num_interactions,
+                    name_length,
                 ),
             )
             cur.close()
