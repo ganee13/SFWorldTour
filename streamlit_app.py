@@ -35,18 +35,49 @@ if mode == "qr":
         unsafe_allow_html=True,
     )
 
+    # Show live response count below QR
+    cur = conn.raw_connection.cursor()
+    cur.execute("SELECT COUNT(*) FROM QR_SURVEY_DEMO.APP.SURVEY_RESPONSES")
+    count = cur.fetchone()[0]
+    cur.close()
+    st.markdown(
+        f"<h2 style='text-align:center; margin-top:1em;'>📊 {count} responses received</h2>",
+        unsafe_allow_html=True,
+    )
+
 else:
     # --- BEHAVIORAL TRACKING ---
     # Track when user first loaded the survey
     if "survey_start_time" not in st.session_state:
         st.session_state.survey_start_time = datetime.now(timezone.utc)
         st.session_state.num_interactions = 0
+        st.session_state.submitted = False
 
     # Count every rerun as an interaction (user changed a widget)
     st.session_state.num_interactions += 1
 
+    # --- CHECK IF ALREADY SUBMITTED ---
+    if st.session_state.submitted:
+        st.title("🧠 AI Readiness Survey")
+        st.success("You've already submitted your response. Thank you! 🎉")
+        # Show response count
+        cur = conn.raw_connection.cursor()
+        cur.execute("SELECT COUNT(*) FROM QR_SURVEY_DEMO.APP.SURVEY_RESPONSES")
+        count = cur.fetchone()[0]
+        cur.close()
+        st.metric("Total Responses So Far", count)
+        st.stop()
+
     # --- SURVEY MODE (mobile user who scanned QR) ---
     st.title("🧠 AI Readiness Survey")
+
+    # Show live response count
+    cur = conn.raw_connection.cursor()
+    cur.execute("SELECT COUNT(*) FROM QR_SURVEY_DEMO.APP.SURVEY_RESPONSES")
+    count = cur.fetchone()[0]
+    cur.close()
+    st.info(f"📊 **{count}** responses received so far")
+
     st.markdown("Answer these quick questions to discover your AI leadership profile!")
     st.divider()
 
@@ -230,5 +261,6 @@ else:
                 ),
             )
             cur.close()
+            st.session_state.submitted = True
             st.success("Thank you! Your response has been recorded. 🎉")
             st.balloons()
