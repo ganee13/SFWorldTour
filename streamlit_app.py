@@ -1,84 +1,75 @@
-# Public QR Survey App for Streamlit Community Cloud - connects to Snowflake via secrets
+# Banking AI Readiness Survey - Agentic banking, data residency, and AI trust assessment
 # Co-authored with CoCo
 import snowflake.connector
 snowflake.connector.paramstyle = "qmark"
 import streamlit as st
 from datetime import datetime, timezone
 
-st.set_page_config(page_title="AI Readiness Survey", page_icon="🧠", layout="centered")
+st.set_page_config(page_title="Agentic Banking Survey", page_icon="🏦", layout="centered")
 
 conn = st.connection("snowflake")
 
 SURVEY_URL = "https://sfworldtour-nqkwvryzwpxpejj2qvesze.streamlit.app"
 SURVEY_DIRECT_URL = f"{SURVEY_URL}/?mode=survey"
 
-# If ?mode=survey is in URL, show the survey form directly (mobile user scanned QR)
 mode = st.query_params.get("mode", "qr")
 
 if mode == "qr":
-    # --- QR DISPLAY MODE (for projector/big screen) ---
     st.markdown(
-        "<h1 style='text-align:center;'>🧠 AI Readiness Survey</h1>",
+        "<h1 style='text-align:center;'>🏦 The Agentic Bank</h1>",
         unsafe_allow_html=True,
     )
     st.markdown(
-        "<p style='text-align:center; font-size:1.3em;'>Scan the QR code with your phone to take the survey</p>",
+        "<p style='text-align:center; font-size:1.2em;'>How do you deploy a reasoning engine inside a bank<br>without violating data residency or triggering an infosec nightmare?</p>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        "<p style='text-align:center; font-size:1.1em; color:gray;'>Scan to share your perspective 👇</p>",
         unsafe_allow_html=True,
     )
     qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=400x400&data={SURVEY_DIRECT_URL}"
     st.markdown(
-        f"<div style='text-align:center; margin:2em 0;'><img src='{qr_url}' width='400'></div>",
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        f"<p style='text-align:center; color:gray; font-size:0.9em;'>{SURVEY_DIRECT_URL}</p>",
+        f"<div style='text-align:center; margin:1.5em 0;'><img src='{qr_url}' width='350'></div>",
         unsafe_allow_html=True,
     )
 
-    # Show live response count below QR
     cur = conn.raw_connection.cursor()
     cur.execute("SELECT COUNT(*) FROM QR_SURVEY_DEMO.APP.SURVEY_RESPONSES")
     count = cur.fetchone()[0]
     cur.close()
     st.markdown(
-        f"<h2 style='text-align:center; margin-top:1em;'>📊 {count} responses received</h2>",
+        f"<h2 style='text-align:center;'>📊 {count} responses</h2>",
         unsafe_allow_html=True,
     )
 
 else:
     # --- BEHAVIORAL TRACKING ---
-    # Track when user first loaded the survey
     if "survey_start_time" not in st.session_state:
         st.session_state.survey_start_time = datetime.now(timezone.utc)
         st.session_state.num_interactions = 0
         st.session_state.submitted = False
 
-    # Count every rerun as an interaction (user changed a widget)
     st.session_state.num_interactions += 1
 
-    # --- CHECK IF ALREADY SUBMITTED ---
     if st.session_state.submitted:
-        st.title("🧠 AI Readiness Survey")
-        st.success("You've already submitted your response. Thank you! 🎉")
-        # Show response count
+        st.title("🏦 The Agentic Bank")
+        st.success("You've submitted your response. Thank you!")
         cur = conn.raw_connection.cursor()
         cur.execute("SELECT COUNT(*) FROM QR_SURVEY_DEMO.APP.SURVEY_RESPONSES")
         count = cur.fetchone()[0]
         cur.close()
-        st.metric("Total Responses So Far", count)
+        st.metric("Total Responses", count)
         st.stop()
 
-    # --- SURVEY MODE (mobile user who scanned QR) ---
-    st.title("🧠 AI Readiness Survey")
+    st.title("🏦 The Agentic Bank")
+    st.markdown("*How ready is your organization to deploy AI reasoning engines in regulated environments?*")
 
-    # Show live response count
     cur = conn.raw_connection.cursor()
     cur.execute("SELECT COUNT(*) FROM QR_SURVEY_DEMO.APP.SURVEY_RESPONSES")
     count = cur.fetchone()[0]
     cur.close()
-    st.info(f"📊 **{count}** responses received so far")
+    st.info(f"📊 **{count}** responses so far")
 
-    st.markdown("Answer these quick questions to discover your AI leadership profile!")
     st.divider()
 
     # --- SECTION 1: Profile ---
@@ -87,144 +78,122 @@ else:
     q1_name = st.text_input("1. What is your name?")
 
     q2_role = st.selectbox(
-        "2. What is your role/designation?",
-        ["-- Select --", "Executive", "Manager", "Developer/Engineer", "Analyst", "Data Scientist", "Other"],
+        "2. What is your role?",
+        ["-- Select --", "CTO/CIO", "CISO/InfoSec", "Data/AI Lead", "Developer/Engineer", "Risk/Compliance", "Business/Product"],
     )
 
-    q3_age = st.selectbox(
-        "3. What is your age group?",
-        ["-- Select --", "20-30", "31-40", "41-50", "51+"],
+    q3_inst = st.selectbox(
+        "3. What type of institution?",
+        ["-- Select --", "Global Bank", "Regional Bank", "Fintech", "Insurance", "Payment Provider", "Regulator/Consultant"],
     )
 
     st.divider()
 
-    # --- SECTION 2: Scenario-Based Questions ---
+    # --- SECTION 2: Banking AI Scenarios ---
     st.header("Scenarios")
 
-    st.subheader("4. Perfectionism vs Pragmatism")
-    st.markdown(
-        "*Your project is 90% complete but the last 10% will take another 6 months. What do you do?*"
-    )
+    st.subheader("4. Data Residency vs AI Capability")
+    st.markdown("*Your AI vendor offers a 10x better model, but data must leave your jurisdiction for inference. What do you do?*")
     q4 = st.radio(
-        "Choose one:",
-        [
-            "A) Ship it now, iterate later",
-            "B) Wait — deliver it right or not at all",
-            "C) Ship the 90% to a subset of users, keep building",
-            "D) Renegotiate scope — cut the 10% entirely",
+        "q4", label_visibility="collapsed",
+        options=[
+            "A) Reject — data residency is non-negotiable, full stop",
+            "B) Explore — if we can anonymize/tokenize the data first",
+            "C) Accept — with contractual safeguards and encryption in transit",
+            "D) Build our own — train in-house to avoid the problem",
         ],
         key="q4",
-        label_visibility="collapsed",
     )
 
-    st.subheader("5. Risk Management")
-    st.markdown(
-        "*You're offered two projects: one with guaranteed moderate success, another with a 50% chance of massive impact or total failure. Which do you pick?*"
-    )
+    st.subheader("5. InfoSec vs Speed of Deployment")
+    st.markdown("*Your team has a working AI prototype that saves $10M/year, but InfoSec needs 6 months to approve. What's your move?*")
     q5 = st.radio(
-        "Choose one:",
-        [
-            "A) Guaranteed moderate success — stability matters",
-            "B) The high-risk, high-reward one — go big",
-            "C) Run both in parallel with a smaller team on the risky one",
-            "D) Pick the risky one but build a fallback plan first",
+        "q5", label_visibility="collapsed",
+        options=[
+            "A) Wait — no shortcuts on security in banking",
+            "B) Sandbox it — run in isolated environment while approval pending",
+            "C) Escalate to the board — ROI justifies fast-tracking",
+            "D) Redesign — fit within already-approved security boundaries",
         ],
         key="q5",
-        label_visibility="collapsed",
     )
 
-    st.subheader("6. Problem-Solving Style")
-    st.markdown(
-        "*A critical production system breaks at 2 AM. What's your first instinct?*"
-    )
+    st.subheader("6. Trust in AI-Generated Code")
+    st.markdown("*An AI assistant generates SQL that touches your production customer data. How do you feel?*")
     q6 = st.radio(
-        "Choose one:",
-        [
-            "A) Roll back to the last working version immediately",
-            "B) Dig into logs to find root cause before touching anything",
-            "C) Assemble the team — this needs all hands",
-            "D) Apply a quick patch now, investigate properly tomorrow",
+        "q6", label_visibility="collapsed",
+        options=[
+            "A) Uncomfortable — humans must write all production queries",
+            "B) Fine — if there's a review step before execution",
+            "C) Great — AI is faster and makes fewer errors than humans",
+            "D) Depends — read-only fine, writes need human approval",
         ],
         key="q6",
-        label_visibility="collapsed",
     )
 
-    st.subheader("7. Handling Constraints & Priorities")
-    st.markdown(
-        "*Your boss adds an urgent task but you're already at full capacity. What do you do?*"
-    )
+    st.subheader("7. Agentic AI in Banking")
+    st.markdown("*An AI agent autonomously detects fraud, freezes accounts, and notifies customers — no human in the loop. Your reaction?*")
     q7 = st.radio(
-        "Choose one:",
-        [
-            "A) Accept it and work extra hours to deliver everything",
-            "B) Push back — show what will be dropped if this is added",
-            "C) Delegate one of my current tasks to make room",
-            "D) Ask which of my current tasks they'd like me to deprioritize",
+        "q7", label_visibility="collapsed",
+        options=[
+            "A) Never — every customer action needs human approval",
+            "B) Detection and alerting only — not taking action",
+            "C) Yes for clear-cut cases (>99% confidence), humans for edge cases",
+            "D) Absolutely — speed is everything in fraud",
         ],
         key="q7",
-        label_visibility="collapsed",
     )
 
-    st.subheader("8. AI Mindset")
-    st.markdown(
-        "*AI can now do 60% of your job faster than you. What's your reaction?*"
-    )
+    st.subheader("8. Where Should AI Live?")
+    st.markdown("*Where should your bank's AI reasoning engine physically run?*")
     q8 = st.radio(
-        "Choose one:",
-        [
-            "A) Great — I'll focus on the 40% that needs human judgment",
-            "B) I need to upskill fast so I stay ahead of AI",
-            "C) I'll become the person who manages and directs the AI",
-            "D) Concerned — what's my value if AI does most of it?",
+        "q8", label_visibility="collapsed",
+        options=[
+            "A) On-premises only — nothing leaves our data center",
+            "B) Sovereign cloud — same compliance as on-prem",
+            "C) Any major cloud — as long as it's contractually compliant",
+            "D) Hybrid — sensitive on-prem, everything else in cloud",
         ],
         key="q8",
-        label_visibility="collapsed",
     )
 
-    st.subheader("9. Leadership Style")
-    st.markdown(
-        "*Two team members disagree on a technical approach. Both have valid points. How do you resolve it?*"
-    )
+    st.subheader("9. Biggest Blocker")
+    st.markdown("*What's the #1 thing stopping your bank from deploying AI faster?*")
     q9 = st.radio(
-        "Choose one:",
-        [
-            "A) Let them prototype both — data will decide",
-            "B) Make the call myself — someone has to decide",
-            "C) Facilitate a discussion until they reach consensus",
-            "D) Go with whoever has more experience in this area",
+        "q9", label_visibility="collapsed",
+        options=[
+            "A) Regulatory uncertainty — don't know what's allowed",
+            "B) Data quality — our data isn't ready for AI",
+            "C) Talent — can't hire fast enough",
+            "D) Culture — leadership doesn't trust AI yet",
         ],
         key="q9",
-        label_visibility="collapsed",
     )
 
-    st.subheader("10. Learning Orientation")
-    st.markdown(
-        "*You have a free week with no deadlines. How do you spend it?*"
-    )
+    st.subheader("10. The Agentic Bank in 3 Years")
+    st.markdown("*In 3 years, what % of banking operations will be handled by AI agents?*")
     q10 = st.radio(
-        "Choose one:",
-        [
-            "A) Learn a completely new skill outside my domain",
-            "B) Go deep on something I already know — become the expert",
-            "C) Build a side project to apply what I've been learning",
-            "D) Rest and recharge — sustainability matters",
+        "q10", label_visibility="collapsed",
+        options=[
+            "A) <10% — banking is too regulated for agents",
+            "B) 10-30% — back-office and analytics only",
+            "C) 30-60% — most routine operations, humans for exceptions",
+            "D) >60% — AI agents will be the default",
         ],
         key="q10",
-        label_visibility="collapsed",
     )
 
     st.divider()
 
     # --- SUBMIT ---
-    if st.button("Submit Survey", type="primary", use_container_width=True):
+    if st.button("Submit", type="primary", use_container_width=True):
         if not q1_name.strip():
             st.error("Please enter your name.")
         elif q2_role == "-- Select --":
             st.error("Please select your role.")
-        elif q3_age == "-- Select --":
-            st.error("Please select your age group.")
+        elif q3_inst == "-- Select --":
+            st.error("Please select your institution type.")
         else:
-            # Calculate behavioral metrics
             submit_time = datetime.now(timezone.utc)
             duration_seconds = (submit_time - st.session_state.survey_start_time).total_seconds()
             num_interactions = st.session_state.num_interactions
@@ -233,10 +202,10 @@ else:
 
             insert_sql = """
                 INSERT INTO QR_SURVEY_DEMO.APP.SURVEY_RESPONSES
-                (Q1_NAME, Q2_ROLE, Q3_AGE_GROUP,
-                 Q4_PERFECTIONISM_VS_PRAGMATISM, Q5_RISK_MANAGEMENT,
-                 Q6_PROBLEM_SOLVING, Q7_CONSTRAINTS_PRIORITIES,
-                 Q8_AI_MINDSET, Q9_LEADERSHIP_STYLE, Q10_LEARNING_ORIENTATION,
+                (Q1_NAME, Q2_ROLE, Q3_INSTITUTION,
+                 Q4_DATA_RESIDENCY, Q5_SECURITY_VS_INNOVATION,
+                 Q6_AI_CODE_TRUST, Q7_AGENTIC_AUTONOMY,
+                 Q8_INFRASTRUCTURE, Q9_BIGGEST_BLOCKER, Q10_FUTURE_VISION,
                  STARTED_AT, DURATION_SECONDS, NUM_INTERACTIONS, NAME_LENGTH)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
@@ -246,7 +215,7 @@ else:
                 (
                     q1_name.strip(),
                     q2_role,
-                    q3_age,
+                    q3_inst,
                     q4[0],
                     q5[0],
                     q6[0],
