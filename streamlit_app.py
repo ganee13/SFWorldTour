@@ -1,5 +1,7 @@
 # Public QR Survey App for Streamlit Community Cloud - connects to Snowflake via secrets
 # Co-authored with CoCo
+import snowflake.connector
+snowflake.connector.paramstyle = "qmark"
 import streamlit as st
 
 st.set_page_config(page_title="AI Readiness Survey", page_icon="🧠", layout="centered")
@@ -159,7 +161,7 @@ if st.button("Submit Survey", type="primary", use_container_width=True):
              Q4_PERFECTIONISM_VS_PRAGMATISM, Q5_RISK_MANAGEMENT,
              Q6_PROBLEM_SOLVING, Q7_CONSTRAINTS_PRIORITIES,
              Q8_AI_MINDSET, Q9_LEADERSHIP_STYLE, Q10_LEARNING_ORIENTATION)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
         cur = conn.raw_connection.cursor()
         cur.execute(
