@@ -185,6 +185,51 @@ else:
 
     st.divider()
 
+    # --- SECTION 3: AML Simulation ---
+    st.header("🔍 AML Simulation")
+    st.markdown("*You're now a fictional bank customer. Help us simulate money laundering detection.*")
+
+    st.subheader("11. Your Transaction Profile")
+    st.markdown("*Pick the transaction pattern that best describes your fictional customer:*")
+    q11 = st.radio(
+        "q11", label_visibility="collapsed",
+        options=[
+            "A) 5 transfers/month, avg $2,000, domestic only",
+            "B) 15 transfers/month, avg $8,000, 3 countries",
+            "C) 50+ transfers/month, avg $500, 10+ countries",
+            "D) 2 transfers/month, avg $95,000, offshore jurisdictions",
+        ],
+        key="q11",
+    )
+
+    st.subheader("12. Sudden Behavior Change")
+    st.markdown("*Your fictional customer suddenly changes behavior. What happened?*")
+    q12 = st.radio(
+        "q12", label_visibility="collapsed",
+        options=[
+            "A) Salary increase — transfers went from $2K to $5K monthly",
+            "B) New business — 30 new payees added in one week",
+            "C) Round-tripping — money sent to Country X, returned from Country Y same day",
+            "D) Dormant account — no activity 11 months, then $200K outbound",
+        ],
+        key="q12",
+    )
+
+    st.subheader("13. AI Flags This — What Do You Do?")
+    st.markdown("*AI flags this customer as suspicious (85% confidence). Your call:*")
+    q13 = st.radio(
+        "q13", label_visibility="collapsed",
+        options=[
+            "A) Auto-file SAR — 85% is good enough",
+            "B) Escalate to human analyst for review",
+            "C) Request more data — 85% isn't enough for action",
+            "D) Ignore — too many false positives already",
+        ],
+        key="q13",
+    )
+
+    st.divider()
+
     # --- SUBMIT ---
     if st.button("Submit", type="primary", use_container_width=True):
         if not q1_name.strip():
@@ -206,8 +251,9 @@ else:
                  Q4_DATA_RESIDENCY, Q5_SECURITY_VS_INNOVATION,
                  Q6_AI_CODE_TRUST, Q7_AGENTIC_AUTONOMY,
                  Q8_INFRASTRUCTURE, Q9_BIGGEST_BLOCKER, Q10_FUTURE_VISION,
+                 Q11_TRANSACTION_PROFILE, Q12_BEHAVIOR_CHANGE, Q13_AML_DECISION,
                  STARTED_AT, DURATION_SECONDS, NUM_INTERACTIONS, NAME_LENGTH)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
             cur = conn.raw_connection.cursor()
             cur.execute(
@@ -223,6 +269,9 @@ else:
                     q8[0],
                     q9[0],
                     q10[0],
+                    q11[0],
+                    q12[0],
+                    q13[0],
                     started_at,
                     duration_seconds,
                     num_interactions,
