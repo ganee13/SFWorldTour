@@ -161,9 +161,10 @@ if st.button("Submit Survey", type="primary", use_container_width=True):
              Q8_AI_MINDSET, Q9_LEADERSHIP_STYLE, Q10_LEARNING_ORIENTATION)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
-        conn.query(
+        cur = conn.raw_connection.cursor()
+        cur.execute(
             insert_sql,
-            params=[
+            (
                 q1_name.strip(),
                 q2_role,
                 q3_age,
@@ -174,7 +175,8 @@ if st.button("Submit Survey", type="primary", use_container_width=True):
                 q8[0],
                 q9[0],
                 q10[0],
-            ],
+            ),
         )
+        cur.close()
         st.success("Thank you! Your response has been recorded. 🎉")
         st.balloons()
