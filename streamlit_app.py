@@ -9,29 +9,33 @@ st.set_page_config(page_title="AI Readiness Survey", page_icon="🧠", layout="c
 conn = st.connection("snowflake")
 
 SURVEY_URL = "https://sfworldtour-nqkwvryzwpxpejj2qvesze.streamlit.app"
+SURVEY_DIRECT_URL = f"{SURVEY_URL}/?mode=survey"
 
-tab_qr, tab_survey = st.tabs(["📱 Scan QR Code", "📝 Take Survey"])
+# If ?mode=survey is in URL, show the survey form directly (mobile user scanned QR)
+mode = st.query_params.get("mode", "qr")
 
-with tab_qr:
+if mode == "qr":
+    # --- QR DISPLAY MODE (for projector/big screen) ---
     st.markdown(
-        "<h1 style='text-align:center;'>Scan to Take the Survey</h1>",
+        "<h1 style='text-align:center;'>🧠 AI Readiness Survey</h1>",
         unsafe_allow_html=True,
     )
     st.markdown(
-        "<p style='text-align:center; font-size:1.2em;'>Point your phone camera at the QR code below</p>",
+        "<p style='text-align:center; font-size:1.3em;'>Scan the QR code with your phone to take the survey</p>",
         unsafe_allow_html=True,
     )
-    qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=400x400&data={SURVEY_URL}"
+    qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=400x400&data={SURVEY_DIRECT_URL}"
     st.markdown(
-        f"<div style='text-align:center;'><img src='{qr_url}' width='400'></div>",
+        f"<div style='text-align:center; margin:2em 0;'><img src='{qr_url}' width='400'></div>",
         unsafe_allow_html=True,
     )
     st.markdown(
-        f"<p style='text-align:center; margin-top:1em; color:gray;'>{SURVEY_URL}</p>",
+        f"<p style='text-align:center; color:gray; font-size:0.9em;'>{SURVEY_DIRECT_URL}</p>",
         unsafe_allow_html=True,
     )
 
-with tab_survey:
+else:
+    # --- SURVEY MODE (mobile user who scanned QR) ---
     st.title("🧠 AI Readiness Survey")
     st.markdown("Answer these quick questions to discover your AI leadership profile!")
     st.divider()
